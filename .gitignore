@@ -19,10 +19,10 @@ doc/api/
 *.js_
 *.js.deps
 *.js.map
-daily_life_app.iml
+weather_forecaster.iml
 # Ignore .idea files
 .idea/
-android/daily_life_app_android.iml
+android/weather_forecaster_android.iml
 
 # Android related
 **/android/**/gradle-wrapper.jar
