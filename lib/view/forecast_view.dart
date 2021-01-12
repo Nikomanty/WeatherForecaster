@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:weather_forecaster/model/current_weather_model.dart';
+import 'package:weather_forecaster/model/network.dart';
+import 'package:weather_forecaster/model/forecast_weather_model.dart';
 
 class ForecastView extends StatefulWidget {
   @override
@@ -6,260 +9,280 @@ class ForecastView extends StatefulWidget {
 }
 
 class _ForecastViewState extends State<ForecastView> {
-  final String _defaultCity = "Oulu";
-  String _city;
+  Future<CurrentWeatherModel> currentWeatherObject;
+  Future<ForecastWeatherModel> weatherForecastObjects;
+  String _city = "Oulu";
+
+  @override
+  void initState() {
+    super.initState();
+    currentWeatherObject = Network().getCurrentWeather(cityName: _city);
+    weatherForecastObjects = Network().getWeatherForecast(cityName: _city);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _city != null ? _city : _defaultCity,
-          style: TextStyle(fontSize: 25),
-        ),
-        centerTitle: true,
-      ),
       body: Container(
         decoration: _createWeatherAppBackground(),
         padding: EdgeInsets.all(10),
-        child: Column(
+        child: ListView(
           children: <Widget>[
-            addSearchBar(),
-            Padding(padding: EdgeInsets.symmetric(vertical: 10)),
-            _createCurrentWeatherWidget(),
-            _addItemDivider(),
-            Container(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _sunriseSunsetWidget(_city, "sunrise"),
-                  _sunriseSunsetWidget(_city, "sunset"),
-                ],
+            _addCitySearchField(),
+            currentWeatherWidget(context),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                "5 day / 3 Hour Forecast",
+                style: TextStyle(fontSize: 20.0, color: Colors.white),
               ),
             ),
-            _addItemDivider(),
-            Text(
-              "5 day / 3 Hour Forecast",
-              style: TextStyle(fontSize: 20.0, color: Colors.white),
-            ),
-            SafeArea(child: _fiveDayThreeHourForecast(_city)),
+            _fiveDayThreeHourForecast(),
           ],
         ),
       ),
     );
   }
 
-  // //Futures
-  //
-  // Future<Map> getWeather(String city) async {
-  //   String apiUrl =
-  //       "http://api.openweathermap.org/data/2.5/weather?q=$city&appid=8ae4bfcdd85127081911f63765a8f29d&units=metric";
-  //   http.Response response = await http.get(apiUrl);
-  //   return json.decode(response.body);
-  // }
-  //
-  // Future<Map> hourWeather(String city) async {
-  //   String apiUrl =
-  //       "http://api.openweathermap.org/data/2.5/forecast?q=$city&appid=8ae4bfcdd85127081911f63765a8f29d&units=metric";
-  //   http.Response response = await http.get(apiUrl);
-  //   return json.decode(response.body);
-  // }
-  //
-  // Future searchCity(BuildContext context) async {
-  //   Map result =
-  //       await Navigator.of(context).push(new MaterialPageRoute(builder: (BuildContext context) {
-  //     return new Search();
-  //   }));
-  //
-  //   if (result != null && result.containsKey("city")) {
-  //     _city = result['city'].toString();
-  //   } else {
-  //     print("Nothing");
-  //   }
-  // }
-
-  Widget addSearchBar() {
+  Widget _addCitySearchField() {
     return Container(
-      height: 50,
-      child: Center(child: Text("Search")),
+      height: 40,
+      child: TextField(
+        decoration: InputDecoration(
+          fillColor: Colors.white.withOpacity(0.5),
+          filled: true,
+          hintText: "Enter city name...",
+          prefixIcon: Icon(
+            Icons.search,
+            color: Colors.black,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          contentPadding: EdgeInsets.all(5),
+        ),
+        onSubmitted: (value) {
+          setState(() {
+            _city = value;
+          });
+        },
+      ),
     );
   }
 
-  Widget _createCurrentWeatherWidget() {
+  Widget currentWeatherWidget(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: FutureBuilder(
+          future: currentWeatherObject,
+          builder: (BuildContext context, AsyncSnapshot<CurrentWeatherModel> snapshot) {
+            if (snapshot.hasData) {
+              CurrentWeatherModel content = snapshot.data;
+              return Container(
+                decoration: _weatherAppItemBackground(),
+                child: Column(
+                  children: [
+                    _addCityNameWidget(content),
+                    _createCurrentWeatherWidget(context, content),
+                    _addItemDivider(),
+                    Container(
+                      margin: EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          _sunriseSunsetWidget("sunrise", content),
+                          _sunriseSunsetWidget("sunset", content),
+                        ],
+                      ),
+                    ),
+                    // _addItemDivider(),
+                  ],
+                ),
+              );
+            } else {
+              return CircularProgressIndicator();
+            }
+          }),
+    );
+  }
+
+  Widget _addCityNameWidget(CurrentWeatherModel content) {
+    return Padding(
+      padding: const EdgeInsets.all(5.0),
+      child: Center(
+        child: Text(
+          "$_city, ${content.sys.country}",
+          style: TextStyle(fontSize: 25, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _createCurrentWeatherWidget(BuildContext context, CurrentWeatherModel content) {
     return Container(
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          _addCurrentWeatherIconWidget(_city),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: 50.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  _addCurrentWeatherInfoWidget(_city, "main", "temp", "ºC"),
-                  _addCurrentWeatherInfoWidget(_city, "main", "humidity", "%"),
-                  _addCurrentWeatherInfoWidget(_city, "wind", "speed", "m/s"),
-                ],
-              ),
-            ),
-          ),
+          _addCurrentWeatherIconWidget(context, content),
+          _addCurrentWeatherInfoWidget(context, content),
         ],
       ),
     );
   }
 
-  Widget _addCurrentWeatherIconWidget(String city) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          FutureBuilder(
-              // future: getWeather(city == null ? "Oulu" : city),
-              builder: (BuildContext context, AsyncSnapshot<Map> snapshot) {
-            if (snapshot.hasData) {
-              Map content = snapshot.data;
-
-              return new Image.asset(
-                "images/clear.png",
-                height: 150.0,
-                width: 150.0,
-              );
-            } else {
-              return new Image.asset(
-                "images/clear.png",
-                height: 150.0,
-                width: 150.0,
-              );
-            }
-          }),
-        ],
+  Widget _addCurrentWeatherIconWidget(
+      BuildContext context, CurrentWeatherModel content) {
+    String imageName = content != null ? content.weather[0].main : "Clear";
+    return Container(
+      child: Image.asset(
+        "images/$imageName.png",
+        height: 120.0,
+        width: 120.0,
       ),
     );
   }
 
   //Widget for current weather
   Widget _addCurrentWeatherInfoWidget(
-      String city, String jsonObject, String jsonField, String suffix) {
-    return new FutureBuilder(
-        // future: getWeather(city == null ? _defaultCity : city),
-        builder: (BuildContext context, AsyncSnapshot<Map> snapshot) {
-      if (snapshot.hasData) {
-        Map content = snapshot.data;
-        return new Container(
-          child: new Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              new Padding(
-                padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 0.0),
-                child: new Text(
-                  "123",
-                  style: new TextStyle(fontSize: 25.0, color: Colors.white),
-                ),
+      BuildContext context, CurrentWeatherModel content) {
+    return Container(
+      margin: EdgeInsets.only(left: 15),
+      width: 170,
+      child: Container(
+        child: new Column(
+          children: <Widget>[
+            _addCurrentWeatherInfoItem(content.main.temp.round(), "Temperature", "°C"),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: Divider(
+                height: 1,
+                color: Colors.white,
+                thickness: 1,
               ),
-            ],
+            ),
+            _addCurrentWeatherInfoItem(content.main.feelsLike.round(), "Feels like", "°C"),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Divider(
+                height: 1,
+                color: Colors.white,
+                thickness: 1,
+              ),
+            ),
+            _addCurrentWeatherInfoItem(content.main.humidity, "Humidity", "%"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _addCurrentWeatherInfoItem(int value, String prefix, String suffix) {
+    return Container(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            "$prefix: ",
+            style: TextStyle(fontSize: 18.0, color: Colors.white),
           ),
-        );
-      } else {
-        return new CircularProgressIndicator();
-      }
-    });
+          Text(
+            "$value $suffix",
+            style: TextStyle(fontSize: 20.0, color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
 
   //Widget for sunset - sunrise weather
-  Widget _sunriseSunsetWidget(String city, String riseOrSet) {
+  Widget _sunriseSunsetWidget(String riseOrSet, CurrentWeatherModel content) {
+    var time = riseOrSet == "sunrise" ? content.sys.sunrise : content.sys.sunset;
+    var convertedTime = DateTime.fromMillisecondsSinceEpoch(time);
     return Expanded(
-      child: FutureBuilder(
-          // future: getWeather(city == null ? util.defaultCity : city),
-          builder: (BuildContext context, AsyncSnapshot<Map> snapshot) {
-        if (snapshot.hasData) {
-          Map content = snapshot.data;
-
-          return new Column(
-            children: <Widget>[
-              new Image.asset(
-                riseOrSet == "sunrise" ? "assets/images/sunrise.png" : "assets/images/sunset.png",
-                height: 50.0,
-                width: 50.0,
-              ),
-              new Text(
-                "date",
-                style: new TextStyle(color: Colors.white),
-              ),
-            ],
-          );
-        } else {
-          return new CircularProgressIndicator();
-        }
-      }),
+      child: Column(
+        children: <Widget>[
+          new Image.asset(
+            riseOrSet == "sunrise" ? "images/Sunrise.png" : "images/Sunset.png",
+            height: 40.0,
+            width: 50.0,
+          ),
+          new Text(
+            "${convertedTime.hour}:${convertedTime.minute}",
+            style: new TextStyle(color: Colors.white, fontSize: 20),
+          ),
+        ],
+      ),
     );
   }
 
   //Widget for 5day / 3 Hour weather
-  Widget _fiveDayThreeHourForecast(String city) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
-      child: FutureBuilder(
-          // future: hourWeather(city == null ? util.defaultCity : city),
-          builder: (BuildContext context, AsyncSnapshot<Map> snapshot) {
-        if (snapshot.hasData) {
-          Map content = snapshot.data;
-          List _days = content['list'];
+  Widget _fiveDayThreeHourForecast() {
+    return FutureBuilder(
+        future: weatherForecastObjects,
+        builder: (BuildContext context, AsyncSnapshot<ForecastWeatherModel> snapshot) {
+          if (snapshot.hasData) {
+            ForecastWeatherModel content = snapshot.data;
+            List _days = content.list;
 
-          return new Container(
-            height: 180.0,
-            child: ListView.builder(
-                itemCount: _days.length - 1,
-                scrollDirection: Axis.horizontal,
-                itemBuilder: (BuildContext context, position) {
-                  final int index = position + 1;
+            return Container(
+              height: 180.0,
+              child: ListView.builder(
+                  itemCount: _days.length,
+                  scrollDirection: Axis.horizontal,
+                  itemBuilder: (BuildContext context, position) {
 
-                  var temp = _days[index]['main']['temp'];
-                  var wind = _days[index]['wind']['speed'];
-                  var icon = _days[index]['weather'][0]['main'];
+                    var temp = content.list[position].main.temp.round();
+                    var feelsLike = content.list[position].main.feelsLike.round();
+                    var icon = content.list[position].weather[0].main;
+                    var dateTime = content.list[position].dt;
 
-                  return new Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                    child: new Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        new Text(
-                          "date",
-                          style: new TextStyle(color: Colors.white),
+                    var date = DateTime.fromMillisecondsSinceEpoch(dateTime);
+
+                    return new Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
+                      child: Container(
+                        width: 80,
+                        decoration: _weatherAppItemBackground(),
+                        child: new Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            new Text(
+                              "${date.day}/${date.month}",
+                              style: new TextStyle(fontSize: 18, color: Colors.white),
+                            ),
+                            new Text(
+                              "${date.hour}:${date.minute}",
+                              style: new TextStyle(fontSize: 18, color: Colors.white),
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 10.0)),
+                            new Image.asset(
+                              "images/$icon.png",
+                              height: 40.0,
+                              width: 40.0,
+                            ),
+                            new Text(
+                              "$temp ºC",
+                              style: new TextStyle(color: Colors.white, fontSize: 20.0),
+                            ),
+                            new Text(
+                              "$feelsLike °C",
+                              style: new TextStyle(color: Colors.white, fontSize: 15.0),
+                            ),
+                          ],
                         ),
-                        new Text(
-                          "time",
-                          style: new TextStyle(color: Colors.white),
-                        ),
-                        new Padding(padding: EdgeInsets.only(top: 10.0)),
-                        new Image.asset(
-                          "assets/images/${icon.toString()}.png",
-                          height: 40.0,
-                          width: 40.0,
-                        ),
-                        new Text(
-                          "${temp.toStringAsFixed(1)} ºC",
-                          style: new TextStyle(color: Colors.white, fontSize: 18.0),
-                        ),
-                        new Text(
-                          "${wind.toStringAsFixed(1)} m/s",
-                          style: new TextStyle(color: Colors.white, fontSize: 15.0),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-          );
-        } else {
-          return new CircularProgressIndicator();
-        }
-      }),
-    );
+                      ),
+                    );
+                  }),
+            );
+          } else {
+            return new CircularProgressIndicator();
+          }
+        });
   }
 
   Widget _addItemDivider() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Divider(
         height: 5,
         color: Colors.white,
@@ -276,8 +299,26 @@ class _ForecastViewState extends State<ForecastView> {
         colors: [
           Colors.blue[900],
           Colors.blue[800],
-          Colors.blue[500],
-          Colors.blue[300],
+          Colors.blue[700],
+          Colors.blue[600],
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _weatherAppItemBackground() {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.white),
+      gradient: new LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0.1, 0.4, 0.7, 0.9],
+        colors: [
+          Colors.blue[600],
+          Colors.blue[700],
+          Colors.blue[800],
+          Colors.blue[900],
         ],
       ),
     );
