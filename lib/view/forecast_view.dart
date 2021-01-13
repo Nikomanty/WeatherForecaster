@@ -16,7 +16,7 @@ class _ForecastViewState extends State<ForecastView> {
   @override
   void initState() {
     super.initState();
-    currentWeatherObject = Network().getCurrentWeather(cityName: _city);
+    currentWeatherObject = getCurrentWeather();
     weatherForecastObjects = Network().getWeatherForecast(cityName: _city);
   }
 
@@ -64,6 +64,8 @@ class _ForecastViewState extends State<ForecastView> {
         onSubmitted: (value) {
           setState(() {
             _city = value;
+            currentWeatherObject = getCurrentWeather();
+            weatherForecastObjects = getForecastWeather();
           });
         },
       ),
@@ -130,8 +132,7 @@ class _ForecastViewState extends State<ForecastView> {
     );
   }
 
-  Widget _addCurrentWeatherIconWidget(
-      BuildContext context, CurrentWeatherModel content) {
+  Widget _addCurrentWeatherIconWidget(BuildContext context, CurrentWeatherModel content) {
     String imageName = content != null ? content.weather[0].main : "Clear";
     return Container(
       child: Image.asset(
@@ -143,8 +144,7 @@ class _ForecastViewState extends State<ForecastView> {
   }
 
   //Widget for current weather
-  Widget _addCurrentWeatherInfoWidget(
-      BuildContext context, CurrentWeatherModel content) {
+  Widget _addCurrentWeatherInfoWidget(BuildContext context, CurrentWeatherModel content) {
     return Container(
       margin: EdgeInsets.only(left: 15),
       width: 170,
@@ -230,7 +230,6 @@ class _ForecastViewState extends State<ForecastView> {
                   itemCount: _days.length,
                   scrollDirection: Axis.horizontal,
                   itemBuilder: (BuildContext context, position) {
-
                     var temp = content.list[position].main.temp.round();
                     var feelsLike = content.list[position].main.feelsLike.round();
                     var icon = content.list[position].weather[0].main;
@@ -323,4 +322,10 @@ class _ForecastViewState extends State<ForecastView> {
       ),
     );
   }
+
+  Future<CurrentWeatherModel> getCurrentWeather() =>
+      new Network().getCurrentWeather(cityName: _city);
+
+  Future<ForecastWeatherModel> getForecastWeather() =>
+      new Network().getWeatherForecast(cityName: _city);
 }
