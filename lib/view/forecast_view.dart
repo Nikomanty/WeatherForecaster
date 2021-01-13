@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:weather_forecaster/model/current_weather_model.dart';
 import 'package:weather_forecaster/model/network.dart';
 import 'package:weather_forecaster/model/forecast_weather_model.dart';
+import 'package:weather_forecaster/util/forecast_util.dart';
 
 class ForecastView extends StatefulWidget {
   @override
@@ -109,12 +111,22 @@ class _ForecastViewState extends State<ForecastView> {
   }
 
   Widget _addCityNameWidget(CurrentWeatherModel content) {
+    var time = Util.getFormattedDate(
+        new DateTime.fromMillisecondsSinceEpoch(content.dt * 1000), Util.longDateAndTimeFormat);
     return Padding(
       padding: const EdgeInsets.all(5.0),
       child: Center(
-        child: Text(
-          "$_city, ${content.sys.country}",
-          style: TextStyle(fontSize: 25, color: Colors.white),
+        child: Column(
+          children: [
+            Text(
+              "$_city, ${content.sys.country}",
+              style: TextStyle(fontSize: 25, color: Colors.white),
+            ),
+            Text(
+              "$time",
+              style: TextStyle(fontSize: 18, color: Colors.white),
+            ),
+          ],
         ),
       ),
     );
@@ -197,7 +209,8 @@ class _ForecastViewState extends State<ForecastView> {
   //Widget for sunset - sunrise weather
   Widget _sunriseSunsetWidget(String riseOrSet, CurrentWeatherModel content) {
     var time = riseOrSet == "sunrise" ? content.sys.sunrise : content.sys.sunset;
-    var convertedTime = DateTime.fromMillisecondsSinceEpoch(time);
+    var convertedTime = Util.getFormattedDate(
+        new DateTime.fromMillisecondsSinceEpoch(time * 1000), Util.onlyTimeFormat);
     return Expanded(
       child: Column(
         children: <Widget>[
@@ -207,7 +220,7 @@ class _ForecastViewState extends State<ForecastView> {
             width: 50.0,
           ),
           new Text(
-            "${convertedTime.hour}:${convertedTime.minute}",
+            convertedTime,
             style: new TextStyle(color: Colors.white, fontSize: 20),
           ),
         ],
@@ -233,9 +246,9 @@ class _ForecastViewState extends State<ForecastView> {
                     var temp = content.list[position].main.temp.round();
                     var feelsLike = content.list[position].main.feelsLike.round();
                     var icon = content.list[position].weather[0].main;
-                    var dateTime = content.list[position].dt;
-
-                    var date = DateTime.fromMillisecondsSinceEpoch(dateTime);
+                    var time = Util.getFormattedDate(
+                        DateTime.fromMillisecondsSinceEpoch(content.list[position].dt * 1000),
+                        Util.shortDateAndTimeFormat);
 
                     return new Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
@@ -246,11 +259,7 @@ class _ForecastViewState extends State<ForecastView> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
                             new Text(
-                              "${date.day}/${date.month}",
-                              style: new TextStyle(fontSize: 18, color: Colors.white),
-                            ),
-                            new Text(
-                              "${date.hour}:${date.minute}",
+                              time,
                               style: new TextStyle(fontSize: 18, color: Colors.white),
                             ),
                             new Padding(padding: EdgeInsets.only(top: 10.0)),
